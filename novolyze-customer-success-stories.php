@@ -7,7 +7,7 @@
 /*
     Plugin Name: Novolyze Customer Success Stories
     Description: Adds the Customer Success Stories
-    Version: 1.0.0
+    Version: 1.0.1
     Author: Mediavista
     Licence: GPLv2 or later
     Text Domain: novolyze-customer-success-stories
@@ -26,10 +26,11 @@ class SuccessStories
   {
     add_action('init', array($this, 'novolyze_customer_success_stories_register'));
   }
-
+  
   function register()
   {
-    add_action('wp_enqueue_scripts', array($this, 'enqueue'));
+    add_action('wp_enqueue_scripts', array($this, 'enqueue_style'));
+    add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
   }
 
   function activate()
@@ -100,9 +101,15 @@ class SuccessStories
   }
 
   // Add CSS and JS
-  function enqueue()
+
+
+  function enqueue_style()
   {
     wp_enqueue_style('customer-success-stories-styles', plugins_url('/assets/customer-success-stories-main.css', __FILE__));
+  }
+
+  function enqueue_scripts()
+  {
     wp_enqueue_script('customer-success-stories-scripts', plugins_url('/assets/novolyze-customer-success-stories.js', __FILE__));
     wp_add_inline_script('search', 'ajax_url', admin_url('admin-ajax.php'));
   }
@@ -207,6 +214,7 @@ register_activation_hook(__FILE__, array($SuccessStories, 'deactivate'));
 
 
 
+
 /**
  * Filter
  */
@@ -263,25 +271,6 @@ function filter_callback()
     )
   );
 
-
-  // if (!empty($_GET['industry'])) {
-  //   $industry = sanitize_text_field($_GET['industry']);
-  //   $args['tax_query'][] = array(
-  //     'taxonomy' => 'industry_categories',   // taxonomy name
-  //     'field' => 'slug',           // term_id, slug or name
-  //     'terms' => $industry,
-  //   );
-  // }
-
-  // if (!empty($_GET['solution'])) {
-  //   $solution = sanitize_text_field($_GET['solution']);
-  //   $args['tax_query'][] = array(
-  //     'taxonomy' => 'solutions_categories',   // taxonomy name
-  //     'field' => 'slug',           // term_id, slug or name
-  //     'terms' => $solution,
-  //   );
-  // }
-
   $filter_query = new WP_Query($args);
 
   while ($filter_query->have_posts()) {
@@ -299,3 +288,89 @@ function filter_callback()
 
   wp_die();
 };
+
+add_action('wp_ajax_termsss', 'termsss');
+add_action('wp_ajax_nopriv_termsss', 'termsss');
+
+function termsss()
+{
+  global $wpdb;
+  header("Content-Type: application/json");
+  $category = sanitize_text_field($_GET['bysolution']);
+  if ($category !== "All") {
+
+    $post_type  = 'success-stories';
+    $taxonomy_a = 'industry_categories';
+    $taxonomy_b = 'solutions_categories';
+    $term_b_id = get_term_by('name', $category, 'solutions_categories')->term_id;
+
+    $query = $wpdb->prepare(
+      "SELECT DISTINCT
+                  terms.*
+              FROM
+                  `wp_uios9uxwyz_terms` terms
+              INNER JOIN
+                  `wp_uios9uxwyz_term_taxonomy` tt1 ON
+                      tt1.term_id = terms.term_id
+              INNER JOIN
+                  `wp_uios9uxwyz_term_relationships` tr1 ON
+                      tr1.term_taxonomy_id = tt1.term_taxonomy_id
+              INNER JOIN
+                  `wp_uios9uxwyz_posts` p ON
+                      p.ID = tr1.object_id
+              INNER JOIN 
+                  `wp_uios9uxwyz_term_relationships` tr2 ON
+                      tr2.object_ID = p.ID
+              INNER JOIN 
+                  `wp_uios9uxwyz_term_taxonomy` tt2 ON
+                      tt2.term_taxonomy_id = tr2.term_taxonomy_id
+              WHERE
+                  p.post_type = %s AND
+                  p.post_status = 'publish' AND
+                  tt1.taxonomy = %s AND
+                  tt2.taxonomy = %s AND
+                  tt2.term_id = %d",
+      [
+        $post_type,
+        $taxonomy_a,
+        $taxonomy_b,
+        $term_b_id,
+      ]
+    );
+
+    $results = $wpdb->get_results($query);
+
+    if ($results) {
+      $terms = array_map('get_term', $results);
+    }
+
+    $final = array();
+
+    foreach ($terms as $key => $term) {
+      $final[] = ["name" => $term->name, "slug" => $term->slug];
+    }
+    $json = json_encode($final);
+    echo $json;
+  } else {
+    $args = array(
+      'type'                     => 'success-stories',
+      'orderby'                  => 'name',
+      'order'                    => 'ASC',
+      'hierarchical'             => 1,
+      'taxonomy'                 => 'industry_categories',
+    );
+    $categories = get_categories($args);
+
+    $final = array();
+    foreach ($categories as $category) {
+      $final[] = ["name" => $category->name, "slug" => $category->slug];
+    }
+
+    $json = json_encode($final);
+    echo json_encode($json);
+  }
+
+
+
+  wp_die();
+}

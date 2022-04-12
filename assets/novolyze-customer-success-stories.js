@@ -3,6 +3,34 @@
     var filter = $("#form");
     var form = $("[data-js-form=filter]");
 
+    $("select#solution").on("change", function () {
+      var choosen = $(this).find(":selected").text()
+      var data = {
+        action: "termsss",
+        bysolution: choosen,
+      };
+
+      $.ajax({
+        url: "/wp-admin/admin-ajax.php",
+        data: data,
+        success: function (response) {
+          if (choosen === "All") {
+            $("select#industry option").remove();
+            $("select#industry").append($("<option></option>").attr("value", "").attr('selected', 'selected').text("All"));
+            $.each(JSON.parse(response), function (index, value) {
+              $("select#industry").append($("<option></option>").attr("value", value.slug).text(value.name));
+            });
+            form.submit();
+          } else if ($.trim(response[0]) !== '') {
+            $("select#industry option").remove();
+            $.each(response, function (index, value) {
+              $("select#industry").append($("<option></option>").attr("value", value.slug).text(value.name));
+            });
+          }
+        }
+      });
+    })
+
     form.submit(function (e) {
       e.preventDefault();
       filter.find("#response-content").empty();
@@ -13,7 +41,6 @@
         paginate = 1
       }
       pag = false;
-      console.log(paginate);
       $('#paginate').hide();
       var data = {
         action: "filter",
@@ -23,14 +50,12 @@
         paginate: paginate
       };
 
-
       $.ajax({
         url: "/wp-admin/admin-ajax.php",
         data: data,
         success: function (response) {
-          console.log($.trim(response[0]))
           filter.find("#response-content").empty();
-          
+
           if ($.trim(response[0]) === '') {
             $("#response-content").html('<h4>No search results for your search criteria</h4>');
           }
@@ -63,11 +88,9 @@
             filter.find("#response-content").append(html);
             $('#paginate').show();
           }
-          
-          
+
           $("#paginate").empty();
           for (let i = 1; i < maximum + 1; i++) {
-            // console.log(i)
             if (maximum > 1) {
               $("#paginate").append('<a class="btn-number page-numbers" data-paginate="' + i + '">' + i + '</a>')
             }
@@ -111,5 +134,7 @@
     });
 
     form.submit();
+
   });
+
 })(jQuery)

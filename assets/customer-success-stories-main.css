@@ -1,3 +1,12 @@
+section.success-hero {
+	background-image: url(list-banner-1.jpg);
+    background-size: cover;
+    min-height: 310px;
+    background-position: center;
+    display: flex;
+    align-items: center;
+}
+
 section.success-hero .hero-logo-image {
   margin: 0 auto 25px;
   display: table;
@@ -16,6 +25,10 @@ section.success-hero .button-outline {
 
 section.success-hero h2.section-headline {
   text-align: center;
+  color: #fff;
+  padding: 30px 0;
+  line-height: 1.3em;
+	margin-bottom: 0
 }
 
 section.success-hero h4.company-name {
